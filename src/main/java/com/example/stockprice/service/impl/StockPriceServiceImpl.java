@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
@@ -26,24 +27,33 @@ public class StockPriceServiceImpl implements StockPriceService {
     private StockPriceRepository stockPriceRepository;
 
     @Override
-    public BigDecimal calculateReturnRate(String stockCode) {
-        String url = "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=&stockNo=" + stockCode;
-        String result = null;
-        try {
-            result = HttpUtil.get(url);
-        } catch (Exception e){
-            log.info("抓取股票資料出錯:{}", e.getMessage(), e);
+    public String calculateReturnRate() {
+        List<StockPrice> selfChooseStock = getSelfChooseStock(null);
+        if (CollUtil.isNotEmpty(selfChooseStock)) {
+            BigDecimal totalReturnRate = BigDecimal.ZERO;
+            for (StockPrice stock : selfChooseStock){
+                String url = "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=&stockNo=" + stock.getStockCode();
+                String result = null;
+                try {
+                    result = HttpUtil.get(url);
+                } catch (Exception e) {
+                    log.info("抓取股票資料出錯:{}", e.getMessage(), e);
+                }
+
+                if (Objects.nonNull(result)) {
+                    JSONObject jsonObject = JSONUtil.parseObj(result);
+                    TwseData twseData = jsonObject.toBean(TwseData.class);
+                    List<String> stockDataList = twseData.getData().get(twseData.getData().size() - 1);
+                    BigDecimal closePrice = new BigDecimal(stockDataList.get(6));
+                    BigDecimal originPrice = stock.getPrice();
+                    BigDecimal returnRate = (closePrice.subtract(originPrice)).divide(originPrice, RoundingMode.HALF_UP);
+                    totalReturnRate = totalReturnRate.add(returnRate);
+                    log.info("投報率計算 股票代碼:{}, 股票名稱:{}, 初始價格:{}, 今日收盤價:{}, 投報率:{}", stock.getStockCode(), stock.getStockName(), originPrice, closePrice, returnRate);
+                }
+            }
+            return totalReturnRate.divide(BigDecimal.valueOf(selfChooseStock.size()), RoundingMode.HALF_UP).multiply(new BigDecimal(100)) + "%";
         }
-
-        if (Objects.nonNull(result)){
-
-
-            JSONObject jsonObject = JSONUtil.parseObj(result);
-            TwseData twseData = jsonObject.toBean(TwseData.class);
-            List<String> stockDataList = twseData.getData().get(twseData.getData().size() - 1);
-        }
-
-        return null;
+        return BigDecimal.ZERO.stripTrailingZeros().toPlainString() + "%";
     }
 
     @Override
@@ -57,8 +67,8 @@ public class StockPriceServiceImpl implements StockPriceService {
 
         if (CollUtil.isEmpty(stockPrice)) {
             StockPrice newSelfChoose = new StockPrice();
-            newSelfChoose.setStockCode(param.getStockCode());
-            newSelfChoose.setStockName(param.getStockName());
+            newSelfChoose.setStockCode(param.getStockCode().trim());
+            newSelfChoose.setStockName(param.getStockName().trim());
             newSelfChoose.setPrice(param.getPrice());
             newSelfChoose.setCreatedDate(new Date());
             stockPriceRepository.saveAndFlush(newSelfChoose);

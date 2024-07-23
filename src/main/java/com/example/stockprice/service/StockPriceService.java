@@ -15,5 +15,5 @@ public interface StockPriceService {
 
     void delSelfChooseStock(String stockCode);
 
-    BigDecimal calculateReturnRate(String stockCode);
+    String calculateReturnRate();
 }

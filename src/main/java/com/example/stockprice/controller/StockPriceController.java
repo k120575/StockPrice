@@ -6,6 +6,7 @@ import com.example.stockprice.service.StockPriceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
@@ -28,5 +29,10 @@ public class StockPriceController {
     @DeleteMapping(value = "/delSelfChooseStock")
     public void delSelfChooseStock(String stockCode){
         stockPriceService.delSelfChooseStock(stockCode);
+    }
+
+    @PostMapping(value = "/calculateReturnRate")
+    public String calculateReturnRate(){
+        return stockPriceService.calculateReturnRate();
     }
 }
