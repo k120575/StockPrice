@@ -6,6 +6,7 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.example.stockprice.entity.param.StockPriceParam;
 import com.example.stockprice.model.StockPrice;
+import com.example.stockprice.model.TpexData;
 import com.example.stockprice.model.TwseData;
 import com.example.stockprice.repository.StockPriceRepository;
 import com.example.stockprice.service.StockPriceService;
@@ -63,21 +64,36 @@ public class StockPriceServiceImpl implements StockPriceService {
 
     @Override
     public void addSelfChooseStock(StockPriceParam param) throws Exception {
-        String url = "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=&stockNo=" + param.getStockCode();
-        String result = null;
+        String twseUrl = "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=&stockNo=" + param.getStockCode();
+        String twseResult;
         try {
-            result = HttpUtil.get(url);
+            twseResult = HttpUtil.get(twseUrl);
         } catch (Exception e) {
-            log.info("抓取股票資料出錯:{}", e.getMessage(), e);
-            throw new Exception("抓取股票資料出錯");
+            log.info("抓取上市股票資料出錯:{}", e.getMessage(), e);
+            throw new Exception("抓取上市股票資料出錯");
         }
 
         BigDecimal closePrice = BigDecimal.ZERO;
-        if (Objects.nonNull(result)){
-            JSONObject jsonObject = JSONUtil.parseObj(result);
-            TwseData twseData = jsonObject.toBean(TwseData.class);
+        JSONObject twseJObject = JSONUtil.parseObj(twseResult);
+        TwseData twseData = twseJObject.toBean(TwseData.class);
+        if (twseData.getStat().equals("OK")) {
             List<String> stockDataList = twseData.getData().get(twseData.getData().size() - 1);
             closePrice = new BigDecimal(stockDataList.get(6));
+        } else {
+            String tpexUrl = "https://www.tpex.org.tw/web/stock/aftertrading/daily_trading_info/st43_result.php?l=zh-tw&d=&stkno=" + param.getStockCode();
+            String tpexResult;
+            try {
+                tpexResult = HttpUtil.get(tpexUrl);
+            } catch (Exception e) {
+                log.info("抓取上櫃股票資料出錯:{}", e.getMessage(), e);
+                throw new Exception("抓取上櫃股票資料出錯");
+            }
+            JSONObject tpexObject = JSONUtil.parseObj(tpexResult);
+            TpexData tpexData = tpexObject.toBean(TpexData.class);
+            if (CollUtil.isNotEmpty(tpexData.getAaData())){
+                List<String> stockDataList = tpexData.getAaData().get(tpexData.getAaData().size() - 1);
+                closePrice = new BigDecimal(stockDataList.get(6));
+            }
         }
 
         List<StockPrice> stockPriceList = stockPriceRepository.findByStockCode(param.getStockCode());

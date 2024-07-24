@@ -13,11 +13,11 @@ public class TwseData {
 
     private String title;
 
-    List<String> fields;
+    private List<String> fields;
 
-    List<List<String>> data;
+    private List<List<String>> data;
 
-    List<String> notes;
+    private List<String> notes;
 
-    Integer total;
+    private Integer total;
 }
