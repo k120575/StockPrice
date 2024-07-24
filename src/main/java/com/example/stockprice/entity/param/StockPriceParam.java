@@ -12,5 +12,5 @@ public class StockPriceParam {
 
     private String stockName;
 
-    private BigDecimal price;
+//    private BigDecimal price;
 }

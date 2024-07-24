@@ -33,6 +33,6 @@ public class StockPriceController {
 
     @PostMapping(value = "/calculateReturnRate")
     public String calculateReturnRate(){
-        return stockPriceService.calculateReturnRate();
+        return "截至今天為止的平均投報率為: " + stockPriceService.calculateReturnRate();
     }
 }

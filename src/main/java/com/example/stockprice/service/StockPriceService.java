@@ -11,7 +11,7 @@ public interface StockPriceService {
 
     List<StockPrice> getSelfChooseStock(String stockCode);
 
-    void addSelfChooseStock(StockPriceParam param);
+    void addSelfChooseStock(StockPriceParam param) throws Exception;
 
     void delSelfChooseStock(String stockCode);
 

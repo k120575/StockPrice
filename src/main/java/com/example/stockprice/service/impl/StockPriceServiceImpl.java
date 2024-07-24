@@ -62,16 +62,36 @@ public class StockPriceServiceImpl implements StockPriceService {
     }
 
     @Override
-    public void addSelfChooseStock(StockPriceParam param) {
-        List<StockPrice> stockPrice = stockPriceRepository.findByStockCode(param.getStockCode());
+    public void addSelfChooseStock(StockPriceParam param) throws Exception {
+        String url = "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=&stockNo=" + param.getStockCode();
+        String result = null;
+        try {
+            result = HttpUtil.get(url);
+        } catch (Exception e) {
+            log.info("抓取股票資料出錯:{}", e.getMessage(), e);
+            throw new Exception("抓取股票資料出錯");
+        }
 
-        if (CollUtil.isEmpty(stockPrice)) {
+        BigDecimal closePrice = BigDecimal.ZERO;
+        if (Objects.nonNull(result)){
+            JSONObject jsonObject = JSONUtil.parseObj(result);
+            TwseData twseData = jsonObject.toBean(TwseData.class);
+            List<String> stockDataList = twseData.getData().get(twseData.getData().size() - 1);
+            closePrice = new BigDecimal(stockDataList.get(6));
+        }
+
+        List<StockPrice> stockPriceList = stockPriceRepository.findByStockCode(param.getStockCode());
+        if (CollUtil.isEmpty(stockPriceList)) {
             StockPrice newSelfChoose = new StockPrice();
             newSelfChoose.setStockCode(param.getStockCode().trim());
             newSelfChoose.setStockName(param.getStockName().trim());
-            newSelfChoose.setPrice(param.getPrice());
+            newSelfChoose.setPrice(closePrice);
             newSelfChoose.setCreatedDate(new Date());
             stockPriceRepository.saveAndFlush(newSelfChoose);
+        } else {
+            StockPrice stockPrice = stockPriceList.get(0);
+            stockPrice.setPrice(closePrice);
+            stockPriceRepository.saveAndFlush(stockPrice);
         }
     }
 
