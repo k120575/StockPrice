@@ -22,7 +22,7 @@ public class StockPriceController {
     }
 
     @PostMapping(value = "/addSelfChooseStock")
-    public void addSelfChooseStock(StockPriceParam param){
+    public void addSelfChooseStock(StockPriceParam param) throws Exception {
         stockPriceService.addSelfChooseStock(param);
     }
 
